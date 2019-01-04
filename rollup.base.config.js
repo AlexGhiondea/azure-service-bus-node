@@ -5,7 +5,6 @@ import json from "rollup-plugin-json";
 import replace from "rollup-plugin-replace";
 import { uglify } from "rollup-plugin-uglify";
 import sourcemaps from "rollup-plugin-sourcemaps";
-import viz from "rollup-plugin-visualizer";
 
 const pkg = require("./package.json");
 const depNames = Object.keys(pkg.dependencies);
@@ -83,8 +82,7 @@ export function browserConfig(test = false) {
       cjs({
         namedExports: { events: ["EventEmitter"] }
       }),
-      json(),
-      viz({ filename: "browser/browser-stats.html", sourcemap: false })
+      json()
     ]
   };
 
