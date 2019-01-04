@@ -66,7 +66,7 @@
     "tslint": "tslint -p . -c tslint.json",
     "tsc": "tsc",
     "prebuild": "rimraf dist && rimraf typings",
-    "build": "npm run tslint && tsc -p . && rollup -c && rollup -c rollup.test.config.js",
+    "build": "npm run tslint && tsc -p . && rollup -c",
     "build-browser": "tsc -p . && cross-env ONLY_BROWSER=true rollup -c",
     "build-node": "tsc -p . && cross-env ONLY_NODE=true rollup -c",
     "test": "npm run build",
