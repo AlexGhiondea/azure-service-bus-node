@@ -617,8 +617,8 @@ export module ReceivedMessageInfo {
       deliveryCount: msg.delivery_count,
       lockToken: delivery
         ? uuid_to_string(
-          typeof delivery.tag === "string" ? Buffer.from(delivery.tag) : delivery.tag
-        )
+            typeof delivery.tag === "string" ? Buffer.from(delivery.tag) : delivery.tag
+          )
         : undefined,
       ...sbmsg,
       ...props
