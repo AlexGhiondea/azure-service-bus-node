@@ -21,7 +21,7 @@ import {
 import * as log from "../log";
 import { LinkEntity } from "./linkEntity";
 import { ClientEntityContext } from "../clientEntityContext";
-import { ServiceBusMessage } from "../serviceBusMessage";
+import { ServiceBusMessage, DispositionType } from "../serviceBusMessage";
 import { getUniqueName, calculateRenewAfterDuration } from "../util/utils";
 import { MessageHandlerOptions } from "./streamingReceiver";
 import { messageDispositionTimeout } from "../util/constants";
@@ -60,16 +60,6 @@ export interface PromiseLike {
 export interface DispositionOptions {
   propertiesToModify?: Dictionary<any>;
   error?: AmqpError;
-}
-
-/**
- * @ignore
- */
-export enum DispositionType {
-  complete = "complete",
-  deadletter = "deadletter",
-  abandon = "abandon",
-  defer = "defer"
 }
 
 /**
@@ -360,7 +350,7 @@ export class MessageReceiver extends LinkEntity {
               const amount = calculateRenewAfterDuration(bMessage.lockedUntilUtc!);
               log.receiver(
                 "[%s] Sleeping for %d milliseconds while renewing the lock for " +
-                  "message with id '%s' is: ",
+                "message with id '%s' is: ",
                 connectionId,
                 amount,
                 bMessage.messageId
@@ -392,7 +382,7 @@ export class MessageReceiver extends LinkEntity {
                   } catch (err) {
                     log.error(
                       "[%s] An error occured while auto renewing the message lock '%s' " +
-                        "for message with id '%s': %O.",
+                      "for message with id '%s': %O.",
                       connectionId,
                       bMessage.lockToken,
                       bMessage.messageId,
@@ -406,7 +396,7 @@ export class MessageReceiver extends LinkEntity {
             } else {
               log.receiver(
                 "[%s] Looks like the message lock renew timer has already been " +
-                  "cleared for message with id '%s'.",
+                "cleared for message with id '%s'.",
                 connectionId,
                 bMessage.messageId
               );
@@ -414,7 +404,7 @@ export class MessageReceiver extends LinkEntity {
           } else {
             log.receiver(
               "[%s] Current time %s exceeds the total autolockrenew duration %s for " +
-                "message with messageId '%s'. Hence we will stop the autoLockRenewTask.",
+              "message with messageId '%s'. Hence we will stop the autoLockRenewTask.",
               connectionId,
               new Date(Date.now()).toString(),
               new Date(totalAutoLockRenewDuration).toString(),
@@ -443,7 +433,7 @@ export class MessageReceiver extends LinkEntity {
           try {
             log.error(
               "[%s] Abandoning the message with id '%s' on the receiver '%s' since " +
-                "an error occured: %O.",
+              "an error occured: %O.",
               connectionId,
               bMessage.messageId,
               this.name,
@@ -454,7 +444,7 @@ export class MessageReceiver extends LinkEntity {
             const translatedError = translate(abandonError);
             log.error(
               "[%s] An error occurred while abandoning the message with id '%s' on the " +
-                "receiver '%s': %O.",
+              "receiver '%s': %O.",
               connectionId,
               bMessage.messageId,
               this.name,
@@ -481,7 +471,7 @@ export class MessageReceiver extends LinkEntity {
           const translatedError = translate(completeError);
           log.error(
             "[%s] An error occurred while completing the message with id '%s' on the " +
-              "receiver '%s': %O.",
+            "receiver '%s': %O.",
             connectionId,
             bMessage.messageId,
             this.name,
@@ -508,21 +498,21 @@ export class MessageReceiver extends LinkEntity {
           if (receiver && !receiver.isItselfClosed()) {
             log.error(
               "[%s] Since the user did not close the receiver and the error is not " +
-                "retryable, we let the user know about it by calling the user's error handler.",
+              "retryable, we let the user know about it by calling the user's error handler.",
               connectionId
             );
             this._onError!(sbError);
           } else {
             log.error(
               "[%s] The received error is not retryable. However, the receiver was " +
-                "closed by the user. Hence not notifying the user's error handler.",
+              "closed by the user. Hence not notifying the user's error handler.",
               connectionId
             );
           }
         } else {
           log.error(
             "[%s] Since received error is retryable, we will NOT notify the user's " +
-              "error handler.",
+            "error handler.",
             connectionId
           );
         }
@@ -544,7 +534,7 @@ export class MessageReceiver extends LinkEntity {
         if (receiver && !receiver.isSessionItselfClosed() && !sbError.retryable) {
           log.error(
             "[%s] Since the user did not close the receiver and the session error is not " +
-              "retryable, we let the user know about it by calling the user's error handler.",
+            "retryable, we let the user know about it by calling the user's error handler.",
             connectionId
           );
           this._onError!(sbError);
@@ -559,7 +549,7 @@ export class MessageReceiver extends LinkEntity {
       if (receiverError) {
         log.error(
           "[%s] 'receiver_close' event occurred for receiver '%s' with address '%s'. " +
-            "The associated error is: %O",
+          "The associated error is: %O",
           connectionId,
           this.name,
           this.address,
@@ -571,8 +561,8 @@ export class MessageReceiver extends LinkEntity {
         if (!this.isConnecting) {
           log.error(
             "[%s] 'receiver_close' event occurred on the receiver '%s' with address '%s' " +
-              "and the sdk did not initiate this. The receiver is not reconnecting. Hence, calling " +
-              "detached from the _onAmqpClose() handler.",
+            "and the sdk did not initiate this. The receiver is not reconnecting. Hence, calling " +
+            "detached from the _onAmqpClose() handler.",
             connectionId,
             this.name,
             this.address
@@ -581,8 +571,8 @@ export class MessageReceiver extends LinkEntity {
         } else {
           log.error(
             "[%s] 'receiver_close' event occurred on the receiver '%s' with address '%s' " +
-              "and the sdk did not initate this. Moreover the receiver is already re-connecting. " +
-              "Hence not calling detached from the _onAmqpClose() handler.",
+            "and the sdk did not initate this. Moreover the receiver is already re-connecting. " +
+            "Hence not calling detached from the _onAmqpClose() handler.",
             connectionId,
             this.name,
             this.address
@@ -591,8 +581,8 @@ export class MessageReceiver extends LinkEntity {
       } else {
         log.error(
           "[%s] 'receiver_close' event occurred on the receiver '%s' with address '%s' " +
-            "because the sdk initiated it. Hence not calling detached from the _onAmqpClose" +
-            "() handler.",
+          "because the sdk initiated it. Hence not calling detached from the _onAmqpClose" +
+          "() handler.",
           connectionId,
           this.name,
           this.address
@@ -607,7 +597,7 @@ export class MessageReceiver extends LinkEntity {
       if (sessionError) {
         log.error(
           "[%s] 'session_close' event occurred for receiver '%s' with address '%s'. " +
-            "The associated error is: %O",
+          "The associated error is: %O",
           connectionId,
           this.name,
           this.address,
@@ -619,8 +609,8 @@ export class MessageReceiver extends LinkEntity {
         if (!this.isConnecting) {
           log.error(
             "[%s] 'session_close' event occurred on the session of receiver '%s' with " +
-              "address '%s' and the sdk did not initiate this. Hence calling detached from the " +
-              "_onSessionClose() handler.",
+            "address '%s' and the sdk did not initiate this. Hence calling detached from the " +
+            "_onSessionClose() handler.",
             connectionId,
             this.name,
             this.address
@@ -629,8 +619,8 @@ export class MessageReceiver extends LinkEntity {
         } else {
           log.error(
             "[%s] 'session_close' event occurred on the session of receiver '%s' with " +
-              "address '%s' and the sdk did not initiate this. Moreover the receiver is already " +
-              "re-connecting. Hence not calling detached from the _onSessionClose() handler.",
+            "address '%s' and the sdk did not initiate this. Moreover the receiver is already " +
+            "re-connecting. Hence not calling detached from the _onSessionClose() handler.",
             connectionId,
             this.name,
             this.address
@@ -639,8 +629,8 @@ export class MessageReceiver extends LinkEntity {
       } else {
         log.error(
           "[%s] 'session_close' event occurred on the session of receiver '%s' with address " +
-            "'%s' because the sdk initiated it. Hence not calling detached from the _onSessionClose" +
-            "() handler.",
+          "'%s' because the sdk initiated it. Hence not calling detached from the _onSessionClose" +
+          "() handler.",
           connectionId,
           this.name,
           this.address
@@ -666,7 +656,7 @@ export class MessageReceiver extends LinkEntity {
       if (this.receiverType === ReceiverType.batching) {
         log.error(
           "[%s] Receiver '%s' with address '%s' is a Batching Receiver, so we will not be " +
-            "re-establishing the receiver link.",
+          "re-establishing the receiver link.",
           connectionId,
           this.name,
           this.address
@@ -682,8 +672,8 @@ export class MessageReceiver extends LinkEntity {
           shouldReopen = true;
           log.error(
             "[%s] close() method of Receiver '%s' with address '%s' was not called. There " +
-              "was an accompanying error and it is retryable. This is a candidate for re-establishing " +
-              "the receiver link.",
+            "was an accompanying error and it is retryable. This is a candidate for re-establishing " +
+            "the receiver link.",
             connectionId,
             this.name,
             this.address
@@ -691,8 +681,8 @@ export class MessageReceiver extends LinkEntity {
         } else {
           log.error(
             "[%s] close() method of Receiver '%s' with address '%s' was not called. There " +
-              "was an accompanying error and it is NOT retryable. Hence NOT re-establishing " +
-              "the receiver link.",
+            "was an accompanying error and it is NOT retryable. Hence NOT re-establishing " +
+            "the receiver link.",
             connectionId,
             this.name,
             this.address
@@ -702,8 +692,8 @@ export class MessageReceiver extends LinkEntity {
         shouldReopen = true;
         log.error(
           "[%s] close() method of Receiver '%s' with address '%s' was not called. " +
-            "There was no accompanying error as well. This is a candidate for re-establishing " +
-            "the receiver link.",
+          "There was no accompanying error as well. This is a candidate for re-establishing " +
+          "the receiver link.",
           connectionId,
           this.name,
           this.address
@@ -782,7 +772,7 @@ export class MessageReceiver extends LinkEntity {
         this._deliveryDispositionMap.delete(delivery.id);
         log.receiver(
           "[%s] Disposition for delivery id: %d, did not complete in %d milliseconds. " +
-            "Hence resolving the promise.",
+          "Hence resolving the promise.",
           this._context.namespace.connectionId,
           delivery.id,
           messageDispositionTimeout
@@ -857,7 +847,7 @@ export class MessageReceiver extends LinkEntity {
       if (!this.isOpen() && !this.isConnecting) {
         log.error(
           "[%s] The receiver '%s' with address '%s' is not open and is not currently " +
-            "establishing itself. Hence let's try to connect.",
+          "establishing itself. Hence let's try to connect.",
           connectionId,
           this.name,
           this.address
@@ -903,7 +893,7 @@ export class MessageReceiver extends LinkEntity {
       } else {
         log.error(
           "[%s] The receiver '%s' with address '%s' is open -> %s and is connecting " +
-            "-> %s. Hence not reconnecting.",
+          "-> %s. Hence not reconnecting.",
           connectionId,
           this.name,
           this.address,

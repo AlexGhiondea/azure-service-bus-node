@@ -12,8 +12,27 @@ import {
 import { Constants, Dictionary, AmqpMessage } from "@azure/amqp-common";
 import * as log from "./log";
 import { ClientEntityContext } from "./clientEntityContext";
-import { DispositionStatus } from "./core/managementClient";
-import { DispositionType } from "./core/messageReceiver";
+
+/**
+ * @ignore
+ */
+export enum DispositionType {
+  complete = "complete",
+  deadletter = "deadletter",
+  abandon = "abandon",
+  defer = "defer"
+}
+
+/**
+ * @ignore
+ */
+export enum DispositionStatus {
+  completed = "completed",
+  defered = "defered",
+  suspended = "suspended",
+  abandoned = "abandoned",
+  renewed = "renewed"
+}
 
 /**
  * Describes the delivery annotations for ServiceBus.
@@ -598,8 +617,8 @@ export module ReceivedMessageInfo {
       deliveryCount: msg.delivery_count,
       lockToken: delivery
         ? uuid_to_string(
-            typeof delivery.tag === "string" ? Buffer.from(delivery.tag) : delivery.tag
-          )
+          typeof delivery.tag === "string" ? Buffer.from(delivery.tag) : delivery.tag
+        )
         : undefined,
       ...sbmsg,
       ...props
