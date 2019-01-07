@@ -5,6 +5,8 @@ import json from "rollup-plugin-json";
 import replace from "rollup-plugin-replace";
 import { uglify } from "rollup-plugin-uglify";
 import sourcemaps from "rollup-plugin-sourcemaps";
+import builtins from "rollup-plugin-node-builtins";
+import globals from "rollup-plugin-node-globals";
 
 const pkg = require("./package.json");
 const depNames = Object.keys(pkg.dependencies);
@@ -51,40 +53,16 @@ export function nodeConfig(test = false) {
 }
 
 export function browserConfig(test = false) {
-  const baseConfig = {
-    input: input,
-    external: ["ms-rest-js"],
-    output: {
-      file: "browser/index.js",
-      format: "umd",
-      name: "ExampleClient",
-      sourcemap: true,
-      globals: { "ms-rest-js": "msRest" }
-    },
-    plugins: [
-      sourcemaps(),
-      replace(
-        // ms-rest-js is externalized so users must include it prior to using this bundle.
-        {
-          delimiters: ["", ""],
-          values: {
-            // replace dynamic checks with if (false) since this is for
+  const baseConfig = { input: input, external: ["ms-rest-js", "util", "events", "os", "path", "url", "http", "https", "assert", "buffer", "querystring", "stream", "zlib"], moduleContext: { "node_modules/async/dist/async.js": "this" }, output: { file: "browser/index.js", format: "umd", name: "ExampleClient", sourcemap: true, globals: { "ms-rest-js": "msRest" } }, plugins: [globals(), builtins(), sourcemaps(), replace(// ms-rest-js is externalized so users must include it prior to using this bundle.
+        { delimiters: ["", ""], values: { // replace dynamic checks with if (false) since this is for
             // browser only. Rollup's dead code elimination will remove
             // any code guarded by if (isNode) { ... }
-            "if (isNode)": "if (false)"
-          }
-        }
-      ),
-      nodeResolve({
+            "if (isNode)": "if (false)" } }), nodeResolve({
         preferBuiltins: false,
         browser: true
-      }),
-      cjs({
-        namedExports: { events: ["EventEmitter"] }
-      }),
-      json()
-    ]
-  };
+      }), cjs({
+        ignore: ["node_modules/debug/src/browser.js"]
+      }), json()] };
 
   if (test) {
     baseConfig.input = "dist-esm/test/**/*.spec.js";
